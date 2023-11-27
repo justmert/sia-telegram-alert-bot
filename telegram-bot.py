@@ -1,5 +1,4 @@
 import os
-from flask import request
 import uvicorn
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv
