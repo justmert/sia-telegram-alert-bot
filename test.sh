@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SERVER_URL="https://66fc-176-41-28-148.ngrok-free.app"
+SERVER_URL="https://www.sia-alert-bot.com"
 
 # Print a message to test the setup
 echo "⭐ Test your setup, and see if it is running successfully"

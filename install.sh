@@ -4,7 +4,7 @@
 set -euo pipefail
 
 # Server URL
-SERVER_URL="https://66fc-176-41-28-148.ngrok-free.app"
+SERVER_URL="https://www.sia-alert-bot.com"
 
 # Function to display the initial menu and get user choice
 
