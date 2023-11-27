@@ -276,7 +276,3 @@ async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_
 application.add_handler(CommandHandler("help", help_command))
 application.add_handler(CommandHandler("start", start))
 application.add_handler(CallbackQueryHandler(button_callback_handler))
-
-# Run FastAPI
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8006)
