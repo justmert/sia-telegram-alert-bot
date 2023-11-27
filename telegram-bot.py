@@ -216,7 +216,9 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
 
 
 @app.post("/set_webhook")
-async def set_webhook(request: Request):
+async def set_webhook(request: Request = None):
+    if request is None:
+        return {"ok": False}
     update = await request.json()
     update = Update.de_json(update, application.bot)
     await application.process_update(update)
