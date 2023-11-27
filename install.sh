@@ -4,7 +4,7 @@
 set -euo pipefail
 
 # Server URL
-SERVER_URL="https://www.sia-alert-bot.com"
+SERVER_URL="http://www.sia-alert-bot.com:8006"
 
 # Function to display the initial menu and get user choice
 
@@ -57,6 +57,7 @@ json_data='{
 response=$(curl -s -w "%{http_code}" --location "localhost:9980/api/bus/webhooks" \
   --data "$json_data" -u ":$PASSWORD")
 
+echo $response
 # Extract the HTTP status code from the response
 http_status="${response: -3}"
 
