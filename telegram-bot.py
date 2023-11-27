@@ -1,4 +1,5 @@
 import os
+from flask import request
 import uvicorn
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv
@@ -15,6 +16,8 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
+import json
+
 
 load_dotenv()
 
@@ -60,8 +63,21 @@ def save_user(unique_id, chat_id):
 
 
 def get_chat_id(unique_id):
-    doc = db.collection("users").document(unique_id).get()
-    return doc.to_dict()["chat_id"] if doc.exists else None
+    if not unique_id:
+        print("Unique ID is empty or null.")
+        return None
+
+    try:
+        doc_ref = db.collection("users").document(unique_id)
+        doc = doc_ref.get()
+        if doc.exists:
+            return doc.to_dict().get("chat_id")
+        else:
+            print(f"No document found for unique_id: {unique_id}")
+            return None
+    except Exception as e:
+        print(f"Error fetching document: {e}")
+        return None
 
 
 def generate_unique_id():
@@ -137,6 +153,69 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=update.effective_chat.id, text=help_text)
 
 
+def format_message(data):
+    """
+    Format the message to be sent.
+    Tries to serialize as JSON, if fails, returns the string representation.
+    """
+    try:
+        # Attempt to format as pretty JSON
+        return json.dumps(data, indent=2, ensure_ascii=False)
+    except TypeError:
+        # If data is not JSON serializable, return the string representation
+        return str(data)
+
+
+@app.post("/alerts")
+async def alerts(unique_id: str, app_type: str, request_body: dict = None):
+    # Fetch the chat_id for the unique_id
+    chat_id = get_chat_id(unique_id)
+    if not chat_id:
+        return {"message": "User not found"}
+
+    try:
+        if request_body is not None:
+            # Format the message with the default formatter
+            message = f"**Alert for {app_type}**\n"
+            payload = request_body.get("payload", None)
+            if payload:
+                if set(["id", "message", "severity", "timestamp"]).issubset(
+                    payload.keys()
+                ):
+                    message += f"ID: **{payload['id']}**\n"
+                    severity_icon = ""
+                    if payload.get("severity") == "error":
+                        severity_icon = "❌"
+
+                    elif payload.get("severity") == "warning":
+                        severity_icon = "⚠️"
+
+                    elif payload.get("severity") == "info":
+                        severity_icon = "ℹ️"
+                    message += f"Severity: **{severity_icon} {payload['severity']}**\n"
+                    message += f"Timestamp: **{payload['timestamp']}**\n"
+                    message += f"Message: **{payload['message']}**\n"
+                    if payload.get("data", None):
+                        message += f"Data: **{format_message(payload['data'])}**\n"
+                else:
+                    message += f"{format_message(payload)}"
+            else:
+                message += f"{format_message(request_body)}"
+
+            # Send the message
+            await application.bot.send_message(
+                chat_id=chat_id, text=message, parse_mode="Markdown"
+            )
+            response_message = "Alert sent successfully"
+        else:
+            response_message = "No data to send"
+    except Exception as e:
+        print(f"Error sending message: {e}")
+        response_message = "Error sending alert"
+
+    return {"message": response_message}
+
+
 @app.post("/set_webhook")
 async def set_webhook(request: Request):
     update = await request.json()
@@ -164,7 +243,7 @@ app.add_event_handler("shutdown", shutdown_event)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("Register User", callback_data="register_user")],
-        [InlineKeyboardButton("Delete User", callback_data="delete_user")],
+        # [InlineKeyboardButton("Delete User", callback_data="delete_user")],
         [InlineKeyboardButton("Help", callback_data="help")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -180,14 +259,14 @@ async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_
     await query.answer()
 
     command = query.data
-    chat_id = query.message.chat_id
+    # chat_id = query.message.chat_id
 
     if command == "register_user":
         # Call the register_user function here
         await register_user(update, context)
-    elif command == "delete_user":
+    # elif command == "delete_user":
         # Call the delete_user function here
-        await delete_user(update, context)
+        # await delete_user(update, context)
     elif command == "help":
         # Call the help_command function here
         await help_command(update, context)
@@ -199,4 +278,4 @@ application.add_handler(CallbackQueryHandler(button_callback_handler))
 
 # Run FastAPI
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host="0.0.0.0", port=8010)
