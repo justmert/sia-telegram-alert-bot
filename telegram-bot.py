@@ -277,4 +277,4 @@ application.add_handler(CallbackQueryHandler(button_callback_handler))
 
 # Run FastAPI
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8010)
+    uvicorn.run(app, host="0.0.0.0", port=8443)
