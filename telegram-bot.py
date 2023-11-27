@@ -226,7 +226,7 @@ async def set_webhook(request: Request):
 async def startup_event():
     # Your startup code here
     await application.initialize()
-    await application.bot.set_webhook(url=f"{SERVER_URL}/set_webhook")
+    await application.bot.set_webhook(url=f"{SERVER_URL}:8443/set_webhook")
 
 
 async def shutdown_event():
