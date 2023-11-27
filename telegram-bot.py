@@ -228,7 +228,7 @@ async def set_webhook(request: Request = None):
 async def startup_event():
     # Your startup code here
     await application.initialize()
-    await application.bot.set_webhook(url=f"{SERVER_URL}:88/set_webhook")
+    await application.bot.set_webhook(url=f"{SERVER_URL}:443/set_webhook")
 
 
 async def shutdown_event():
@@ -279,4 +279,4 @@ application.add_handler(CallbackQueryHandler(button_callback_handler))
 
 # Run FastAPI
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=88)
+    uvicorn.run(app, host="0.0.0.0", port=443)
