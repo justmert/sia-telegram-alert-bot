@@ -1,0 +1,6 @@
+fastapi==0.89.1
+uvicorn==0.20.0
+python-dotenv==0.16.0
+python-telegram-bot==20.0a2
+firebase-admin==6.1.0
+slowapi==0.1.8
