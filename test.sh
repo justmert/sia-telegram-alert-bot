@@ -29,9 +29,17 @@ read -s -p "Provide the password: " PASSWORD
 echo # New line for clean output
 
 # Function to check if Sia app is running by accessing its endpoint
+
 function check_sia_endpoint() {
-    if curl -s -u ":$PASSWORD" --head --request GET "http://$api_url/api/alerts" | grep "200 OK" > /dev/null; then
-        echo "Sia $app_type is running."
+    local sia_endpoint
+    if [ "$app_type" == "Renterd" ]; then
+        sia_endpoint="/api/bus/alerts"
+    else
+        sia_endpoint="/api/alerts"
+    fi
+
+    if curl -s -u ":$PASSWORD" --head --request GET "http://$api_url$sia_endpoint" | grep "200 OK" > /dev/null; then
+        echo "✓ Sia $app_type is running."
     else
         echo "Error: Unable to reach Sia $app_type at $api_url. Please check if it is running."
         exit 1
