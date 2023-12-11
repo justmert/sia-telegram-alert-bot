@@ -205,19 +205,19 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
                     severity_icon = ""
                     severity_message = ""
                     if payload.get("severity") == "error":
-                        severity_icon = "\❌"
+                        severity_icon = "❌"
                         severity_message = "Error"
 
                     elif payload.get("severity") == "warning":
-                        severity_icon = "\❗"
+                        severity_icon = "❗"
                         severity_message = "Warning"
 
                     elif payload.get("severity") == "info":
-                        severity_icon = "\ℹ️"
+                        severity_icon = "ℹ️"
                         severity_message = "Info"
 
                     elif payload.get("severity") == "critical":
-                        severity_icon = "\🔥"
+                        severity_icon = "🔥"
                         severity_message = "Critical"
 
                     message = f"{severity_icon} {severity_message} alert for *{app_type}*\n"
