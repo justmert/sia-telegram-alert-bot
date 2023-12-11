@@ -221,8 +221,8 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
                         severity_message = "Critical"
 
                     message = f"{severity_icon} {severity_message} alert for *{app_type}*\n"
-                    formatted_timestamp = parse_timestamp(payload['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
-                    message += f"*Timestamp*: {formatted_timestamp}\n"
+                    # formatted_timestamp = parse_timestamp(payload['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
+                    # message += f"*Timestamp*: {formatted_timestamp}\n"
                     message += f"*Message*: {payload['message']}\n"
                     if payload.get("data", None):
                         message += f"""```json{format_message(payload['data'])}
