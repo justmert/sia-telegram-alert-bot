@@ -16,6 +16,7 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 import json
+from datetime import datetime
 
 
 load_dotenv()
@@ -176,23 +177,37 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
         if request_body is not None:
             # Format the message with the default formatter
             message = f"**Alert for {app_type}**\n"
-            payload = request_body.get("payload", None)
+            payload  = None
+            if app_type.lower() == "renterd":
+                payload = request_body.get("payload", None)
+
+            elif app_type.lower() == "hostd":
+                payload = request_body.get("data", None)
+            
+                
             if payload:
-                if set(["id", "message", "severity", "timestamp"]).issubset(
+                if set(["message", "severity", "timestamp"]).issubset(
                     payload.keys()
                 ):
-                    message += f"ID: **{payload['id']}**\n"
+                    # message += f"ID: **{payload['id']}**\n"
                     severity_icon = ""
                     if payload.get("severity") == "error":
                         severity_icon = "❌"
 
                     elif payload.get("severity") == "warning":
-                        severity_icon = "⚠️"
+                        severity_icon = "❗"
 
                     elif payload.get("severity") == "info":
                         severity_icon = "ℹ️"
+
+                    elif payload.get("severity") == "critical":
+                        severity_icon = "🔥"
                     message += f"Severity: **{severity_icon} {payload['severity']}**\n"
-                    message += f"Timestamp: **{payload['timestamp']}**\n"
+                    
+                    human_readable_timestamp = datetime.fromisoformat(payload['timestamp'].replace('Z', '+00:00'))
+                    # Format the datetime object into a human-readable string
+                    formatted_timestamp = human_readable_timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                    message += f"Timestamp: **{formatted_timestamp}**\n"
                     message += f"Message: **{payload['message']}**\n"
                     if payload.get("data", None):
                         message += f"Data: **{format_message(payload['data'])}**\n"
