@@ -189,7 +189,6 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
     try:
         if request_body is not None:
             # Format the message with the default formatter
-            message = f"**Alert for {app_type}**\n"
             payload  = None
             if app_type.lower() == "renterd":
                 payload = request_body.get("payload", None)
@@ -202,7 +201,7 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
                 if set(["message", "severity", "timestamp"]).issubset(
                     payload.keys()
                 ):
-                    # message += f"ID: **{payload['id']}**\n"
+                    # message += f"ID: *{payload['id']}*\n"
                     severity_icon = ""
                     if payload.get("severity") == "error":
                         severity_icon = "❌"
@@ -215,14 +214,15 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
 
                     elif payload.get("severity") == "critical":
                         severity_icon = "🔥"
-                    message += f"Severity: **{severity_icon} {payload['severity']}**\n"
-                    
-                    formatted_timestamp = parse_timestamp(payload['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
 
-                    message += f"Timestamp: **{formatted_timestamp}**\n"
-                    message += f"Message: **{payload['message']}**\n"
+                    message = f"{severity_icon} {payload['severity']} alert for *{app_type}*\n"                    
+                    formatted_timestamp = parse_timestamp(payload['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
+                    message += f"*Timestamp*: {formatted_timestamp}\n"
+                    message += f"*Message*: {payload['message']}\n"
                     if payload.get("data", None):
-                        message += f"Data: **{format_message(payload['data'])}**\n"
+                        message += f"""```json
+                        {format_message(payload['data'])}
+                        ```"""
                 else:
                     message += f"{format_message(payload)}"
             else:
@@ -230,7 +230,7 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
 
             # Send the message
             await application.bot.send_message(
-                chat_id=chat_id, text=message, parse_mode="Markdown"
+                chat_id=chat_id, text=message, parse_mode="MarkdownV2"
             )
             response_message = "Alert sent successfully"
         else:
