@@ -165,6 +165,19 @@ def format_message(data):
         # If data is not JSON serializable, return the string representation
         return str(data)
 
+def parse_timestamp(timestamp):
+    # Check if the timestamp ends with 'Z'
+    if timestamp.endswith('Z'):
+        # Truncate to microsecond precision and replace 'Z' with '+00:00'
+        timestamp = timestamp[:26] + '+00:00'
+    elif '+' in timestamp:
+        # If the timestamp contains a timezone offset, truncate to microsecond precision
+        timestamp = timestamp[:timestamp.index('+') + 6] + timestamp[timestamp.index('+'):]
+
+    # Convert the timestamp to a datetime object
+    return datetime.fromisoformat(timestamp)
+
+
 
 @app.post("/alerts")
 async def alerts(unique_id: str, app_type: str, request_body: dict = None):
@@ -204,9 +217,8 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
                         severity_icon = "🔥"
                     message += f"Severity: **{severity_icon} {payload['severity']}**\n"
                     
-                    human_readable_timestamp = datetime.fromisoformat(payload['timestamp'].replace('Z', '+00:00'))
-                    # Format the datetime object into a human-readable string
-                    formatted_timestamp = human_readable_timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                    formatted_timestamp = parse_timestamp(payload['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
+
                     message += f"Timestamp: **{formatted_timestamp}**\n"
                     message += f"Message: **{payload['message']}**\n"
                     if payload.get("data", None):
