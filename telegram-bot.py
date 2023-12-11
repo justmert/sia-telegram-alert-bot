@@ -219,10 +219,10 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
                     formatted_timestamp = parse_timestamp(payload['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
                     message += f"*Timestamp*: {formatted_timestamp}\n"
                     message += f"*Message*: {payload['message']}\n"
-                    if payload.get("data", None):
-                        message += f"""```json
-                        {format_message(payload['data'])}
-                        ```"""
+                    # if payload.get("data", None):
+                        # message += f"""```json
+                        # {format_message(payload['data'])}
+                        # ```"""
                 else:
                     message += f"{format_message(payload)}"
             else:
