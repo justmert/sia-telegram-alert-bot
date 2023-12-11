@@ -165,18 +165,20 @@ def format_message(data):
         # If data is not JSON serializable, return the string representation
         return str(data)
 
+
 def parse_timestamp(timestamp):
     # Check if the timestamp ends with 'Z'
-    if timestamp.endswith('Z'):
+    if timestamp.endswith("Z"):
         # Truncate to microsecond precision and replace 'Z' with '+00:00'
-        timestamp = timestamp[:26] + '+00:00'
-    elif '+' in timestamp:
+        timestamp = timestamp[:26] + "+00:00"
+    elif "+" in timestamp:
         # If the timestamp contains a timezone offset, truncate to microsecond precision
-        timestamp = timestamp[:timestamp.index('+') + 6] + timestamp[timestamp.index('+'):]
+        timestamp = (
+            timestamp[: timestamp.index("+") + 6] + timestamp[timestamp.index("+") :]
+        )
 
     # Convert the timestamp to a datetime object
     return datetime.fromisoformat(timestamp)
-
 
 
 @app.post("/alerts")
@@ -189,18 +191,15 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
     try:
         if request_body is not None:
             # Format the message with the default formatter
-            payload  = None
+            payload = None
             if app_type.lower() == "renterd":
                 payload = request_body.get("payload", None)
 
             elif app_type.lower() == "hostd":
                 payload = request_body.get("data", None)
-            
-                
+
             if payload:
-                if set(["message", "severity", "timestamp"]).issubset(
-                    payload.keys()
-                ):
+                if set(["message", "severity", "timestamp"]).issubset(payload.keys()):
                     # message += f"ID: *{payload['id']}*\n"
                     severity_icon = ""
                     severity_message = ""
@@ -220,12 +219,17 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
                         severity_icon = "🔥"
                         severity_message = "Critical"
 
-                    message = f"{severity_icon} {severity_message} alert for *{app_type}*\n"
-                    # formatted_timestamp = parse_timestamp(payload['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
-                    # message += f"*Timestamp*: {formatted_timestamp}\n"
+                    message = (
+                        f"{severity_icon} {severity_message} alert for *{app_type}*\n"
+                    )
+                    formatted_timestamp = parse_timestamp(
+                        payload["timestamp"]
+                    ).strftime("%Y\-%m\-%d %H:%M:%S")
+                    message += f"*Timestamp*: {formatted_timestamp}\n"
                     message += f"*Message*: {payload['message']}\n"
                     if payload.get("data", None):
-                        message += f"""```json{format_message(payload['data'])}
+                        message += f"""```json
+{format_message(payload['data'])}
                         ```"""
                 else:
                     message += f"{format_message(payload)}"
@@ -297,8 +301,8 @@ async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_
         # Call the register_user function here
         await register_user(update, context)
     # elif command == "delete_user":
-        # Call the delete_user function here
-        # await delete_user(update, context)
+    # Call the delete_user function here
+    # await delete_user(update, context)
     elif command == "help":
         # Call the help_command function here
         await help_command(update, context)
