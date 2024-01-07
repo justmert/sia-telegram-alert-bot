@@ -3,6 +3,8 @@
 # Improved error handling
 set -euo pipefail
 
+service_url="http://service.example.app:8006"
+
 # Function to display the initial menu and get user choice
 echo "⭐ Welcome to Sia Renterd/Hostd Telegram Bot! Which application do you want to register alerts?"
 echo "1. Renterd"
@@ -51,14 +53,14 @@ read -p "Enter your unique id (get from t.me/sia_alert_bot): " unique_id
 if [ "$app_type" == "Hostd" ]; then
     json_data='{
         "scopes": ["alerts.info", "alerts.warning", "alerts.error", "alerts.critical"],
-        "callbackURL": "http://www.sia-alert-bot.com:8006/alerts?unique_id='$unique_id'&app_type='$app_type'"
+        "callbackURL": "'$service_url'/alerts?unique_id='$unique_id'&app_type='$app_type'"
     }'
     api_endpoint="/api/webhooks"
 else
     json_data='{
         "module": "alerts",
         "event": "register",
-        "url": "http://www.sia-alert-bot.com:8006/alerts?unique_id='$unique_id'&app_type='$app_type'"
+        "url": "'$service_url'/alerts?unique_id='$unique_id'&app_type='$app_type'"
     }'
     api_endpoint="/api/bus/webhooks"
 fi
