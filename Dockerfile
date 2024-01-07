@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 #Source telegram-bot.py
-COPY telegram-bot.py ./
+COPY telegram-bot.py /usr/src/app/telegram-bot.py
 
 # User to run renterd as. Defaults to root.
 ENV PUID=0
@@ -24,4 +24,4 @@ VOLUME [ "/data" ]
 
 USER ${PUID}:${PGID}
 
-CMD [ "uvicorn", "--host 0.0.0.0 --port 9180 /usr/src/app/telegram-bot:app" ]
+CMD [ "uvicorn", "telegram-bot:app", "--host", "0.0.0.0", "--port", "9180" ]
