@@ -17,7 +17,7 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 import json
 from datetime import datetime
-
+import re
 
 load_dotenv()
 
@@ -182,8 +182,24 @@ def parse_timestamp(timestamp):
 
 
 def escape_markdown(text):
-    escape_chars = "_*[]()~`>#+-=|{}.!"
-    return "".join(f"\\{c}" if c in escape_chars else c for c in text)
+    # Escape special characters except in date-time formats
+    escape_chars = '_*[]()~`>#+=|{}.!'
+    date_time_format = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
+
+    # Split the text into date-time and other parts
+    parts = re.split(f"({date_time_format})", text)
+    escaped_parts = []
+
+    for part in parts:
+        if re.match(date_time_format, part):
+            # Do not escape date-time strings
+            escaped_parts.append(part)
+        else:
+            # Escape special characters in other parts
+            escaped_part = ''.join(f'\\{c}' if c in escape_chars else c for c in part)
+            escaped_parts.append(escaped_part)
+
+    return ''.join(escaped_parts)
 
 
 @app.post("/alerts")
@@ -229,7 +245,7 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
                     )
                     formatted_timestamp = parse_timestamp(
                         payload["timestamp"]
-                    ).strftime("%Y\-%m\-%d %H:%M:%S")
+                    ).strftime("%Y-%m-%d %H:%M:%S")
                     message += f"*Timestamp*: {formatted_timestamp}\n"
                     message += f"*Message*: {payload['message']}\n"
                     if payload.get("data", None):
@@ -257,9 +273,11 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
                 else:
                     message += f"{format_message(request_body)}"
 
+            escaped_markdown = escape_markdown(message)
+            print(escaped_markdown)
             # Send the message
             await application.bot.send_message(
-                chat_id=chat_id, text=escape_markdown(message), parse_mode="MarkdownV2"
+                chat_id=chat_id, text=escaped_markdown, parse_mode="MarkdownV2"
             )
             response_message = "Alert sent successfully"
         else:
