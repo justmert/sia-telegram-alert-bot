@@ -231,7 +231,8 @@ def format_alert(alert_message, app_type):
         return message, "MarkdownV2"
 
     elif set(["event", "scope"]).issubset(alert_message.keys()):
-        message = f"{alert_message['event']} event for *{app_type}*\n"
+        message = f"⏰ Alert for *{app_type}*\n"
+        message += f"*Event*: {alert_message['event']}\n"
         message += f"*Scope*: {alert_message['scope']}\n"
 
         # Iterate over each key-value pair in alert_message
@@ -251,7 +252,8 @@ def format_alert(alert_message, app_type):
         return message, "MarkdownV2"
 
     elif set(["module", "event"]):
-        message = f"{alert_message['module']} module event for *{app_type}*\n"
+        message = f"⏰ Alert for *{app_type}*\n"
+        message += f"*Module*: {alert_message['module']}\n"
         message += f"*Event*: {alert_message['event']}\n"
 
         # Iterate over each key-value pair in alert_message
