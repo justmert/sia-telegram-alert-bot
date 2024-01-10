@@ -60,34 +60,62 @@ alert_payload='{
     "timestamp": "2023-08-30T12:20:49.611086295Z"
 }'
 
+if [ "$app_type" == "Renterd" ]; then
+    api_endpoint="/api/bus/alerts/register"
 # Set the appropriate API endpoint based on the app type
-api_endpoint=$([ "$app_type" == "Renterd" ] && echo "/api/bus/alerts/register" || echo "/api/alerts/register")
+# api_endpoint=$([ "$app_type" == "Renterd" ] && echo "/api/bus/alerts/register" || echo "/api/alerts/register")
 
-# Make a curl request to register an alert
-response=$(curl -s -w "\n%{http_code}" --location "http://$api_url$api_endpoint" \
---header "Content-Type: application/json" \
---request POST \
---data "$alert_payload" -u ":$PASSWORD")
 
-# Extract the HTTP status code from the response
-http_status=$(echo "$response" | tail -n1)
+    # Make a curl request to register an alert
+    response=$(curl -s -w "\n%{http_code}" --location "http://$api_url$api_endpoint" \
+    --header "Content-Type: application/json" \
+    --request POST \
+    --data "$alert_payload" -u ":$PASSWORD")
 
-# Check if the alert registration was successful (status code 200)
-if [ "$http_status" == "200" ]; then
-    echo "Alert registered successfully."
+    # Extract the HTTP status code from the response
+    http_status=$(echo "$response" | tail -n1)
 
-    # Ask the user if they have received a telegram message from t.me/sia_alert_bot
-    read -p "Have you received a telegram message from t.me/sia_alert_bot? (yes/no): " received_telegram
-    case "$received_telegram" in
-        [Yy]|[Yy][Ee][Ss])
-            echo "Great! Your setup appears to be working as expected."
-            exit 0
-            ;;
-        *)
-            echo "Your setup may be broken. Please run the installation script."
-            exit 1
-            ;;  
-    esac
+    # Check if the alert registration was successful (status code 200)
+    if [ "$http_status" == "200" ]; then
+        echo "Alert registered successfully."
+
+        # Ask the user if they have received a telegram message from t.me/sia_alert_bot
+        read -p "Have you received a telegram message from t.me/sia_alert_bot? (yes/no): " received_telegram
+        case "$received_telegram" in
+            [Yy]|[Yy][Ee][Ss])
+                echo "Great! Your setup appears to be working as expected."
+                exit 0
+                ;;
+            *)
+                echo "Your setup may be broken. Please run the installation script."
+                exit 1
+                ;;  
+        esac
+    else
+        echo "Error: Alert registration failed. HTTP Status Code: $http_status"
+    fi
 else
-    echo "Error: Alert registration failed. HTTP Status Code: $http_status"
+    # Hostd-specific code
+
+    # Get the list of webhooks and find our endpoint's ID
+    webhooks_response=$(curl -s -u ":$PASSWORD" "http://$api_url/api/webhooks")
+    webhook_id=$(echo "$webhooks_response" | jq '.[0].id')
+    
+    # Check if a valid webhook ID was obtained
+    if [ -z "$webhook_id" ] || [ "$webhook_id" == "null" ]; then
+        echo "Error: No valid webhook ID found. Please ensure a webhook is configured."
+        exit 1
+    fi   
+
+    test_webhook_response=$(curl -s -w "\n%{http_code}" -u ":$PASSWORD" --location --request POST "http://$api_url/api/webhooks/$webhook_id/test")
+
+    # Check the response
+    http_status=$(echo "$test_webhook_response" | tail -n1)
+    if [ "$http_status" == "200" ]; then
+        echo "Webhook test successful."
+    else
+        echo "Error: Webhook test failed. HTTP Status Code: $http_status"
+        exit 1
+    fi
 fi
+

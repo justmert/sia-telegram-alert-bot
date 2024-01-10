@@ -181,6 +181,11 @@ def parse_timestamp(timestamp):
     return datetime.fromisoformat(timestamp)
 
 
+def escape_markdown(text):
+    escape_chars = "_*[]()~`>#+-=|{}.!"
+    return "".join(f"\\{c}" if c in escape_chars else c for c in text)
+
+
 @app.post("/alerts")
 async def alerts(unique_id: str, app_type: str, request_body: dict = None):
     # Fetch the chat_id for the unique_id
@@ -198,9 +203,9 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
             elif app_type.lower() == "hostd":
                 payload = request_body.get("data", None)
 
+            message = ""
             if payload:
                 if set(["message", "severity", "timestamp"]).issubset(payload.keys()):
-                    # message += f"ID: *{payload['id']}*\n"
                     severity_icon = ""
                     severity_message = ""
                     if payload.get("severity") == "error":
@@ -234,11 +239,27 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
                 else:
                     message += f"{format_message(payload)}"
             else:
-                message += f"{format_message(request_body)}"
+                if set(["event", "scope"]).issubset(request_body.keys()):
+                    message = f"{request_body['event']} event for *{app_type}*\n"
+                    message += f"*Scope*: {request_body['scope']}\n"
+                    if request_body.get("data", None):
+                        message += f"""```json
+{format_message(payload['data'])}
+                        ```"""
+
+                elif set(["module", "event"]):
+                    message = f"{request_body['module']} module event for *{app_type}*\n"
+                    message += f"*Event*: {request_body['event']}\n"
+                    if request_body.get("data", None):
+                        message += f"""```json
+{format_message(payload['data'])}
+                        ```"""
+                else:
+                    message += f"{format_message(request_body)}"
 
             # Send the message
             await application.bot.send_message(
-                chat_id=chat_id, text=message, parse_mode="MarkdownV2"
+                chat_id=chat_id, text=escape_markdown(message), parse_mode="MarkdownV2"
             )
             response_message = "Alert sent successfully"
         else:
@@ -267,8 +288,6 @@ async def startup_event():
 
 
 async def shutdown_event():
-    # Your shutdown code here
-    # For example, clean up connections, save state, etc.
     pass
 
 
