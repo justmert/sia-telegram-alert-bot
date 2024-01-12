@@ -12,8 +12,8 @@ echo "2. Hostd"
 while true; do
     read -p "Enter your choice (1/2): " app_choice
     case "$app_choice" in
-        1|2) break;;
-        *) echo "Invalid choice. Please select either 1 or 2.";;
+    1 | 2) break ;;
+    *) echo "Invalid choice. Please select either 1 or 2." ;;
     esac
 done
 
@@ -38,7 +38,7 @@ function check_sia_endpoint() {
         sia_endpoint="/api/alerts"
     fi
 
-    if curl -s -u ":$PASSWORD" --head --request GET "http://$api_url$sia_endpoint" | grep "200 OK" > /dev/null; then
+    if curl -s -u ":$PASSWORD" --head --request GET "http://$api_url$sia_endpoint" | grep "200 OK" >/dev/null; then
         echo "✓ Sia $app_type is running."
     else
         echo "Error: Unable to reach Sia $app_type at $api_url. Please check if it is running."
@@ -60,34 +60,44 @@ alert_payload='{
     "timestamp": "2023-08-30T12:20:49.611086295Z"
 }'
 
-# Set the appropriate API endpoint based on the app type
-api_endpoint=$([ "$app_type" == "Renterd" ] && echo "/api/bus/alerts/register" || echo "/api/alerts/register")
+# Function to test the Sia app based on app_type
+function test_sia_app() {
+    local http_status
+    if [ "$app_type" == "Renterd" ]; then
+        local api_endpoint="/api/bus/alerts/register"
+        local response=$(curl -s -w "\n%{http_code}" --location "http://$api_url$api_endpoint" \
+            --header "Content-Type: application/json" \
+            --request POST \
+            --data "$alert_payload" -u ":$PASSWORD")
+        http_status=$(echo "$response" | tail -n1)
+    else
+        local webhooks_response=$(curl -s -u ":$PASSWORD" "http://$api_url/api/webhooks")
+        local webhook_id=$(echo "$webhooks_response" | jq '.[0].id')
+        if [ -z "$webhook_id" ] || [ "$webhook_id" == "null" ]; then
+            echo "Error: No valid webhook ID found. Please ensure a webhook is configured."
+            exit 1
+        fi
+        local test_webhook_response=$(curl -s -w "\n%{http_code}" -u ":$PASSWORD" --location --request POST "http://$api_url/api/webhooks/$webhook_id/test")
+        http_status=$(echo "$test_webhook_response" | tail -n1)
+    fi
 
-# Make a curl request to register an alert
-response=$(curl -s -w "\n%{http_code}" --location "http://$api_url$api_endpoint" \
---header "Content-Type: application/json" \
---request POST \
---data "$alert_payload" -u ":$PASSWORD")
-
-# Extract the HTTP status code from the response
-http_status=$(echo "$response" | tail -n1)
-
-# Check if the alert registration was successful (status code 200)
-if [ "$http_status" == "200" ]; then
-    echo "Alert registered successfully."
-
-    # Ask the user if they have received a telegram message from t.me/sia_alert_bot
-    read -p "Have you received a telegram message from t.me/sia_alert_bot? (yes/no): " received_telegram
-    case "$received_telegram" in
-        [Yy]|[Yy][Ee][Ss])
+    if [ "$http_status" == "200" ]; then
+        echo "Test successful."
+        read -p "Have you received a telegram message from t.me/sia_alert_bot? (yes/no): " received_telegram
+        case "$received_telegram" in
+        [Yy] | [Yy][Ee][Ss])
             echo "Great! Your setup appears to be working as expected."
-            exit 0
             ;;
         *)
             echo "Your setup may be broken. Please run the installation script."
             exit 1
-            ;;  
-    esac
-else
-    echo "Error: Alert registration failed. HTTP Status Code: $http_status"
-fi
+            ;;
+        esac
+    else
+        echo "Error: Test failed. HTTP Status Code: $http_status"
+        exit 1
+    fi
+}
+
+# Perform the test based on app_type
+test_sia_app

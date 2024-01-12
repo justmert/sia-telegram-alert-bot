@@ -17,7 +17,7 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 import json
 from datetime import datetime
-
+import re
 
 load_dotenv()
 
@@ -181,6 +181,102 @@ def parse_timestamp(timestamp):
     return datetime.fromisoformat(timestamp)
 
 
+def escape_markdown(text):
+    escape_chars = "_*[]()~`>#+-=|{}.!"
+    return "".join(f"\\{c}" if c in escape_chars else c for c in text)
+
+
+def format_alert(alert_message, app_type):
+    if set(["message", "severity", "timestamp"]).issubset(alert_message.keys()):
+        severity_icon = ""
+        severity_message = ""
+        if alert_message.get("severity") == "error":
+            severity_icon = "❌"
+            severity_message = "Error"
+
+        elif alert_message.get("severity") == "warning":
+            severity_icon = "❗"
+            severity_message = "Warning"
+
+        elif alert_message.get("severity") == "info":
+            severity_icon = "ℹ️"
+            severity_message = "Info"
+
+        elif alert_message.get("severity") == "critical":
+            severity_icon = "🔥"
+            severity_message = "Critical"
+
+        message = f"{severity_icon} {severity_message} alert for *{app_type}*\n"
+        formatted_timestamp = parse_timestamp(alert_message["timestamp"]).strftime(
+            "%Y\-%m\-%d %H:%M:%S"
+        )
+        message += f"*Timestamp*: {formatted_timestamp}\n"
+        message += f"*Message*: {alert_message['message']}\n"
+
+        # Iterate over each key-value pair in alert_message
+        for key, value in alert_message.items():
+            if key not in [
+                "message",
+                "severity",
+                "timestamp",
+                "id",
+                "data",
+            ]:  # Skip already included keys
+                message += f"*{key.capitalize()}*: {escape_markdown(value)}\n"
+
+        if alert_message.get("data", None):
+            message += f"""```json
+{escape_markdown(format_message(alert_message['data']))}
+            ```"""
+        return message, "MarkdownV2"
+
+    elif set(["event", "scope"]).issubset(alert_message.keys()):
+        message = f"⏰ Alert for *{app_type}*\n"
+        message += f"*Event*: {alert_message['event']}\n"
+        message += f"*Scope*: {alert_message['scope']}\n"
+
+        # Iterate over each key-value pair in alert_message
+        for key, value in alert_message.items():
+            if key not in [
+                "event",
+                "scope",
+                "data",
+                "id",
+            ]:  # Skip already included keys
+                message += f"*{key.capitalize()}*: {escape_markdown(value)}\n"
+
+        if alert_message.get("data", None):
+            message += f"""```json
+{escape_markdown(format_message(alert_message['data']))}
+            ```"""
+        return message, "MarkdownV2"
+
+    elif set(["module", "event"]):
+        message = f"⏰ Alert for *{app_type}*\n"
+        message += f"*Module*: {alert_message['module']}\n"
+        message += f"*Event*: {alert_message['event']}\n"
+
+        # Iterate over each key-value pair in alert_message
+        for key, value in alert_message.items():
+            if key not in [
+                "module",
+                "event",
+                "data",
+                "id",
+            ]:  # Skip already included keys
+                message += f"*{key.capitalize()}*: {escape_markdown(value)}\n"
+
+        if alert_message.get("data", None):
+            message += f"""```json
+{escape_markdown(format_message(alert_message['data']))}
+            ```"""
+        return message, "MarkdownV2"
+
+    else:
+        message = f"{format_message(alert_message)}"
+        return message, "HTML"
+
+
 @app.post("/alerts")
 async def alerts(unique_id: str, app_type: str, request_body: dict = None):
     # Fetch the chat_id for the unique_id
@@ -199,46 +295,17 @@ async def alerts(unique_id: str, app_type: str, request_body: dict = None):
                 payload = request_body.get("data", None)
 
             if payload:
-                if set(["message", "severity", "timestamp"]).issubset(payload.keys()):
-                    # message += f"ID: *{payload['id']}*\n"
-                    severity_icon = ""
-                    severity_message = ""
-                    if payload.get("severity") == "error":
-                        severity_icon = "❌"
-                        severity_message = "Error"
+                formatted_alert, parse_mode = format_alert(payload, app_type)
+                await application.bot.send_message(
+                    chat_id=chat_id, text=formatted_alert, parse_mode=parse_mode
+                )
 
-                    elif payload.get("severity") == "warning":
-                        severity_icon = "❗"
-                        severity_message = "Warning"
-
-                    elif payload.get("severity") == "info":
-                        severity_icon = "ℹ️"
-                        severity_message = "Info"
-
-                    elif payload.get("severity") == "critical":
-                        severity_icon = "🔥"
-                        severity_message = "Critical"
-
-                    message = (
-                        f"{severity_icon} {severity_message} alert for *{app_type}*\n"
-                    )
-                    formatted_timestamp = parse_timestamp(
-                        payload["timestamp"]
-                    ).strftime("%Y\-%m\-%d %H:%M:%S")
-                    message += f"*Timestamp*: {formatted_timestamp}\n"
-                    message += f"*Message*: {payload['message']}\n"
-                    if payload.get("data", None):
-                        message += f"""```json
-{format_message(payload['data'])}
-                        ```"""
-                else:
-                    message += f"{format_message(payload)}"
             else:
-                message += f"{format_message(request_body)}"
+                formatted_alert, parse_mode = format_alert(request_body, app_type)
 
             # Send the message
             await application.bot.send_message(
-                chat_id=chat_id, text=message, parse_mode="MarkdownV2"
+                chat_id=chat_id, text=formatted_alert, parse_mode=parse_mode
             )
             response_message = "Alert sent successfully"
         else:
@@ -267,8 +334,6 @@ async def startup_event():
 
 
 async def shutdown_event():
-    # Your shutdown code here
-    # For example, clean up connections, save state, etc.
     pass
 
 
